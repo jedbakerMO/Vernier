@@ -37,29 +37,53 @@ def parse_cli_arguments(input_arguments: list[str] = None,
 
     return parser.parse_args(args=input_arguments)
 
-def read_mpi_ranks(directory_path: Path,
-                    input_name: str,
+def read_mpi_ranks(file_path: Path,
+                   input_name: str,
                 ) -> int:
     """ Returns the no. of output files
 
     Reads the directory containing the output files to determine how many there are.
 
     Args:
-        directory_path: The path to the directory containing the files to be opened later.
+        file_path: The path to the directory containing the files to be opened later.
         input_name:     The name of the vernier output files.    
 
     Returns:
         The length of the 'files' list, which is equal to the number of vernier outputs in the directory         
     """
 
-    files = glob.glob(f"{directory_path}/{input_name}*")
+    files = glob.glob(f"{file_path}/{input_name}*")
 
     return len(files)
+
+def determine_threads(file_path: Path,
+                      input_name: str,
+                    ) -> int:
+    """ Returns the no. of threads profiled
+
+    Reads the first vernier output file to determine how many threads are being profiled
+
+    Args:
+        file_path: The path to the directory containing the file to be read.
+        input_name:     The name of the vernier output files.    
+
+    Returns:
+        The number of OpenMP threads Vernier has profiled, an integer
+    """
+    
+    file = open(f"{file_path}/{input_name}0")
+
+    """ Reads the first line of the file """
+    content = (file.read()).split("\n")[0]
+    
+    """ Finds the first integer in the first line and returns it """
+    return int((re.search(r'\d+',content)).group())
 
 def read_and_pre_process(file_path: Path,
                          rank: int, 
                          input_name: str,
                          full_info_bool: bool,
+                         no_of_threads: int,
                      ) -> pd.DataFrame:
     """ Reads a vernier-output and processes it 
 
@@ -72,6 +96,7 @@ def read_and_pre_process(file_path: Path,
                         are ordered according to MPI rank.
         input_name:     The name of the vernier output files without the rank.
         full_info_bool: A boolean which if set to True will give merge all vernier recordings for final output.
+        no_of_threads:     The number of (OpenMP) threads used that Vernier has analysed
 
     Returns:
         A Pandas dataframe containing the processed vernier output data.
@@ -96,6 +121,23 @@ def read_and_pre_process(file_path: Path,
     dataframe = dataframe.reset_index(drop=True)
     dataframe = dataframe.drop(columns=["index"])
 
+    """ If any threading has been used then... """
+    if no_of_threads != 1:
+
+        """ Creates a new temporary dataframe of duplicates """
+        dataframe["basename"] = dataframe["Routine"].str.extract(r'(^[^@]+)')
+        threaded_routines = dataframe[dataframe.duplicated("basename", keep=False)]
+        
+        """ Calculates the slowest threads for each routine, by 'Self' """
+        slowest_threads = threaded_routines.loc[threaded_routines.groupby("basename")["Self"].idxmax()]
+        slowest_threads["Routine"] = slowest_threads["basename"]+"@0"
+
+        """ Deletes the other threads' routine info and replaces them with the slowest thread only """
+        dataframe = dataframe.drop(threaded_routines.index)
+        dataframe = pd.concat([dataframe, slowest_threads], ignore_index=True)
+        dataframe = dataframe.drop(columns=["basename"])
+
+
     """ If the user wants the full information then it will be returned, 
     otherwise the pruned information will be pruned """
     if full_info_bool:
@@ -113,6 +155,7 @@ def merge_and_analyse(file_path: Path,
                       input_name: str,
                       basic_output_bool: bool,
                       full_info_bool: bool,
+                      no_of_threads: int,
                   ) -> pd.DataFrame:
     """ Reads in the files and merges them 
 
@@ -125,10 +168,11 @@ def merge_and_analyse(file_path: Path,
         mpiranks:          The number of mpi ranks (equivalent to the number of files) to iterate through.
         input_name:        The name of the vernier output files without the rank.
         basic_output_bool: A boolean which if set to True will not calculate minimum/ maximum values. 
-        file_path:      The path where the vernier outputs are located.
-        mpiranks:       The number of mpi ranks (equivalent to the number of files) to iterate through.
-        input_name:     The name of the vernier output files without the rank.
-        full_info_bool: A boolean which if set to True will give merge all vernier recordings for final output.
+        file_path:         The path where the vernier outputs are located.
+        mpiranks:          The number of mpi ranks (equivalent to the number of files) to iterate through.
+        input_name:        The name of the vernier output files without the rank.
+        full_info_bool:    A boolean which if set to True will give merge all vernier recordings for final output.
+        no_of_threads:     The number of (OpenMP) threads used that Vernier has analysed
 
     Returns:
         The merged dataframe, containing the routine names and the mean 'Self' and 'Total' values across all outputs.
@@ -140,7 +184,7 @@ def merge_and_analyse(file_path: Path,
     for rank in range(0,mpiranks):
 
         """ Open the file, read it, workout where it actually starts """
-        dataframe = read_and_pre_process(file_path, rank, input_name, full_info_bool)
+        dataframe = read_and_pre_process(file_path, rank, input_name, full_info_bool, no_of_threads)
 
         if rank == 0:     
 
@@ -175,7 +219,7 @@ def merge_and_analyse(file_path: Path,
             mean_df[f"Min_{column}"]  = min_df[column]
             mean_df[f"Max_{column}"]  = max_df[column]
         mean_df = mean_df.drop(columns=[f"{column}"])  
-
+    print(mean_df)
     return mean_df
 
 def main():
@@ -196,14 +240,15 @@ def main():
 
     else:
 
+        no_of_threads = determine_threads(file_path, input_name)
+
         print("\nReading and Merging...")
 
-
-        merged_frame = merge_and_analyse(file_path, int(mpiranks), input_name, basic_output_bool, full_info_bool)
+        merged_frame = merge_and_analyse(file_path, int(mpiranks), input_name, basic_output_bool, full_info_bool, no_of_threads)
 
         thread_string = "@0" 
         merged_frame["Routine"] = merged_frame["Routine"].str.replace(thread_string, '')
-
+        
         print("\nWriting...")
         with open(f"{merged_file_name}", 'w') as f:
                   f.write(merged_frame.to_string(index=False, col_space=10))

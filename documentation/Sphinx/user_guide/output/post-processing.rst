@@ -90,3 +90,6 @@ Below is an example of the current script output without additional flags.
 * Mean_Self: Mean total time spent inside the corresponding region only (excluding calls to other regions).
 
 
+.. dropdown:: ``A note on threading``
+  When processing threaded Vernier outputs, this script will always merge/ analyse the slowest
+  thread for a given routine. This may be changed to give additional functionality in the future. 
