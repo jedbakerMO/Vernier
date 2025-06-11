@@ -248,7 +248,7 @@ def main():
 
         thread_string = "@0" 
         merged_frame["Routine"] = merged_frame["Routine"].str.replace(thread_string, '')
-        
+
         print("\nWriting...")
         with open(f"{merged_file_name}", 'w') as f:
                   f.write(merged_frame.to_string(index=False, col_space=10))
