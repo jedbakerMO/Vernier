@@ -53,13 +53,15 @@ script, these are given in the table below.
     * - ``-d/ --decimals``
       - 3
       - Number of decimal places to report calculated values to
-
-    * - ``-b/ --basic_output``
+    * - ``-m/ --max_only``
       - False
-      - If used will only output mean values across MPI ranks
+      - If used will only calculate maximum values across MPI ranks
+    * - ``-f/ --full_info``
+      - False
+      - Enables full Vernier output to be merged and output
 
+Below is an example of the current script output without additional flags.
 
-Below is an example of the current script output.
 
 .. code-block:: text
 
