@@ -53,6 +53,9 @@ script, these are given in the table below.
     * - ``-b/ --basic_output``
       - False
       - If used will only output mean values across MPI ranks
+    * - ``-r/ --recursive_process``
+      - False
+      - If used will process all vernier outputs found within subdirectories of given path
 
 Below is an example of the current script output.
 
