@@ -226,7 +226,7 @@ def main():
 
         print("\nMerging files in: ", output_path)
 
-        merged_frame = merge_and_analyse(file_path, int(mpiranks), input_name, max_only_bool, full_info_bool)
+        merged_frame = merge_and_analyse(output_path, int(mpiranks), input_name, max_only_bool, full_info_bool)
         thread_string = "@0" 
         merged_frame["Routine"] = merged_frame["Routine"].str.replace(thread_string, '')
 
