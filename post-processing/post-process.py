@@ -35,7 +35,7 @@ def parse_cli_arguments(input_arguments: list[str] = None,
     parser.add_argument("-b", "--basic_output",      action="store_true", default=False,                        help="Outputs only mean values across MPI ranks")
     parser.add_argument("-m", "--max_only",          action="store_true", default=False,                        help="Only calculates the maximum value across all ranks")
     parser.add_argument("-f", "--full_info",         action="store_true", default=False,                        help="Enables merging and displaying of all information Vernier records")
-    parser.add_argument("-r", "--recursive_process", action="store_true", default=False,                        help="Recursively processes all found vernier outputs in the given directory"
+    parser.add_argument("-r", "--recursive_process", action="store_true", default=False,                        help="Recursively processes all found vernier outputs in the given directory")
     return parser.parse_args(args=input_arguments)
 
 def read_mpi_ranks(directory_path: Path,
@@ -196,8 +196,6 @@ def main():
     full_info_bool    = args.full_info
     recursive_process = args.recursive_process
 
-    mpiranks = read_mpi_ranks(file_path, input_name)
-
     if recursive_process:
         print("\nVernier outputs found in: \n")
         valid_directories = []
@@ -207,11 +205,10 @@ def main():
                 print( os.path.relpath(root))
 
     else:
+
         valid_directories = [file_path]
 
-        mpiranks = read_mpi_ranks(output_path, input_name)
-
-        if mpiranks == 0:
+        if read_mpi_ranks(output_path, input_name) == 0:
 
             print("Error, no vernier-outputs detected")
             print("Searched in: ", output_path)
