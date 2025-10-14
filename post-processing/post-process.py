@@ -197,12 +197,19 @@ def main():
     recursive_process = args.recursive_process
 
     if recursive_process:
+
         print("\nVernier outputs found in: \n")
+
         valid_directories = []
+
         for root, dirs, files in os.walk("."):
             if (input_name+"0") in files:
                 valid_directories.append(os.path.relpath(root))
                 print( os.path.relpath(root))
+
+        if len(valid_directories) == 0:
+
+            print("Error, no vernier-outputs detected")
 
     else:
 
