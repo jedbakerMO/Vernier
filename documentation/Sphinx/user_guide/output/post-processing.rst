@@ -52,8 +52,8 @@ script, these are given in the table below.
       - Vernier files to read from
     * - ``-m/ --max_only``
       - False
-      - If used will only output max values across MPI ranks
-     * - ``-f/ --full_info``
+      - If used will only output maximum values across MPI ranks
+    * - ``-f/ --full_info``
       - False
       - Enables full Vernier output to be merged and output
     * - ``-r/ --recursive_process``
