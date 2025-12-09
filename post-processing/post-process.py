@@ -186,7 +186,7 @@ def single_merge(file_path: Path,
                  input_name: str,
                  max_only_bool: bool,
                  full_info_bool: bool,
-            ) -> pd.DataFrame:
+            ):# -> pd.DataFrame:
     """ Reads in the collated file and merges data
 
         REPLACE THIS REPLACE THIS REPLACE THIS
@@ -204,37 +204,50 @@ def single_merge(file_path: Path,
     Returns:
         The merged dataframe, containing the routine names and the mean 'Self' and 'Total' values across all outputs.
     """
-    print(f"Path to open: {file_path}")
+    print(f"Path to open: {file_path}/{input_name}")
 
     """
     CREATE INITIAL FRAME
     """
     file = open(f'{file_path}/{input_name}')
     content = file.read()
-
+    pattern = re.compile(r'Task\s+(\d+)\s+of\s+(\d+)\s*:\s*MPI\s+rank\s+ID\s+(\d+)\b', flags=re.IGNORECASE)
+    match = pattern.search(content)
+    try:
+        mpiranks = int(match.group(2))
+        print("Number of mpi ranks: ", mpiranks)
+    except:
+        print("Error processing file")
+    start_lines = []
+    for line_no, line in enumerate(content.splitlines(), start=1):
+                                   if pattern.search(line):
+                                    start_lines.append(line_no)
+    print(start_lines)
+    
+    
     """
     LOAD AND MERGE NEXT FRAME
     """
 
     """ Averages the summed dataframe """    
-    mean_df = prev_df.drop(columns=["Routine"]) / int(mpiranks)
-    mean_df["Routine"] = prev_df["Routine"]
+    #mean_df = prev_df.drop(columns=["Routine"]) / int(mpiranks)
+    #mean_df["Routine"] = prev_df["Routine"]
 
     """ Adds the min/ max values to the mean dataframe and renames columns """
 
-    if full_info_bool:
-        output_df = mean_df.drop(columns=["Calls"])
-    else:
-        output_df = mean_df.copy()
-    for column in output_df.drop(columns=["Routine"]):
-        if not(max_only_bool):
-            output_df[f"Min_{column}"]  = min_df[column]
-            output_df[f"Mean_{column}"] = mean_df[column]
-        output_df[f"Max_{column}"]  = max_df[column]
-        output_df = output_df.drop(columns=[f"{column}"])  
-    if full_info_bool:
-        output_df["Calls"] = max_df["Calls"]
-    return output_df
+    #if full_info_bool:
+    #    output_df = mean_df.drop(columns=["Calls"])
+    #else:
+    #    output_df = mean_df.copy()
+    #for column in output_df.drop(columns=["Routine"]):
+    #    if not(max_only_bool):
+    #        output_df[f"Min_{column}"]  = min_df[column]
+    #        output_df[f"Mean_{column}"] = mean_df[column]
+    #    output_df[f"Max_{column}"]  = max_df[column]
+    #    output_df = output_df.drop(columns=[f"{column}"])  
+    #if full_info_bool:
+    #    output_df["Calls"] = max_df["Calls"]
+    #return output_df
 
 def main():
 
@@ -249,18 +262,19 @@ def main():
 
     if single_file_bool:
         print("Processing single file")
-        if input_name == "vernier-output-"
-            input_name == "vernier-output-collated"
+        if input_name == "vernier-output-":
+            input_name = "vernier-output-collated"
 
         print("\nReading and Merging...")
-        merged_frame = single_merge(file_path, input_name, max_only_bool, full_info_bool)
-        thread_string = "@0" 
-        merged_frame["Routine"] = merged_frame["Routine"].str.replace(thread_string, '')
-
-        print("\nWriting...")
-        with open(f"{merged_file_name}", 'w') as f:
-                  f.write(merged_frame.to_string(index=False, col_space=10))
-        print(f"Merged outputs written to {merged_file_name}\n")
+        single_merge(file_path, input_name, max_only_bool, full_info_bool)
+        #merged_frame = single_merge(file_path, input_name, max_only_bool, full_info_bool)
+        #thread_string = "@0" 
+        #merged_frame["Routine"] = merged_frame["Routine"].str.replace(thread_string, '')
+#
+        #print("\nWriting...")
+        #with open(f"{merged_file_name}", 'w') as f:
+        #          f.write(merged_frame.to_string(index=False, col_space=10))
+        #print(f"Merged outputs written to {merged_file_name}\n")
 
     else:
 
