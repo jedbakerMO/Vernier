@@ -29,11 +29,12 @@ def parse_cli_arguments(input_arguments: list[str] = None,
     """
 
     parser = argparse.ArgumentParser(description="This script is for merging the outputs from a test that uses Vernier callipers into one file. For full documentation please see the post-processing section of the user guide.")
-    parser.add_argument("-p", "--path",         type=Path,  default=(os.getcwd()),                help="Path to Vernier output files")
-    parser.add_argument("-o", "--output_name",  type=str,   default=str("vernier-merged-output"), help="Name of file to write to")
-    parser.add_argument("-i", "--input_name",   type=str,   default=str("vernier-output-"),       help="Vernier files to read from")
-    parser.add_argument("-m", "--max_only",     action="store_true", default=False,               help="Only calculates the maximum value across all ranks")
-    parser.add_argument("-f", "--full_info",    action="store_true", default=False,               help="Enables merging and displaying of all information Vernier records")
+    parser.add_argument("-p", "--path",        type=Path,  default=(os.getcwd()),                help="Path to Vernier output files")
+    parser.add_argument("-o", "--output_name", type=str,   default=str("vernier-merged-output"), help="Name of file to write to")
+    parser.add_argument("-i", "--input_name",  type=str,   default=str("vernier-output-"),       help="Vernier files to read from")
+    parser.add_argument("-m", "--max_only",    action="store_true", default=False,               help="Only calculates the maximum value across all ranks")
+    parser.add_argument("-f", "--full_info",   action="store_true", default=False,               help="Enables merging and displaying of all information Vernier records")
+    parser.add_argument("-s", "--single_file", action="store_true", default=False,               help="Enables processing single files")
 
     return parser.parse_args(args=input_arguments)
 
@@ -193,28 +194,37 @@ def main():
     input_name = args.input_name
     max_only_bool = args.max_only
     full_info_bool = args.full_info
-    mpiranks = read_mpi_ranks(file_path, input_name)
+    single_file_bool = args.single_file
 
-    if mpiranks == 0:
-
-        print("Error, no vernier-outputs detected")
-        print("Searched in: ", file_path)
+    if single_file_bool:
+        print("Processing single file")
+        if input_name == "vernier-output-"
+            input_name == "vernier-output-collated"
 
     else:
 
-        print("\nReading and Merging...")
+        mpiranks = read_mpi_ranks(file_path, input_name)
+
+        if mpiranks == 0:
+
+            print("Error, no vernier-outputs detected")
+            print("Searched in: ", file_path)
+
+        else:
+
+            print("\nReading and Merging...")
 
 
-        merged_frame = merge_and_analyse(file_path, int(mpiranks), input_name, max_only_bool, full_info_bool)
+            merged_frame = merge_and_analyse(file_path, int(mpiranks), input_name, max_only_bool, full_info_bool)
 
-        thread_string = "@0" 
-        merged_frame["Routine"] = merged_frame["Routine"].str.replace(thread_string, '')
+            thread_string = "@0" 
+            merged_frame["Routine"] = merged_frame["Routine"].str.replace(thread_string, '')
 
-        print("\nWriting...")
-        with open(f"{merged_file_name}", 'w') as f:
-                  f.write(merged_frame.to_string(index=False, col_space=10))
+            print("\nWriting...")
+            with open(f"{merged_file_name}", 'w') as f:
+                      f.write(merged_frame.to_string(index=False, col_space=10))
 
-        print(f"Merged outputs written to {merged_file_name}\n")
+            print(f"Merged outputs written to {merged_file_name}\n")
 
 
 if __name__ == '__main__':
