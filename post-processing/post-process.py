@@ -126,9 +126,6 @@ def merge_and_analyse(file_path: Path,
         mpiranks:       The number of mpi ranks (equivalent to the number of files) to iterate through.
         input_name:     The name of the vernier output files without the rank.
         max_only_bool:  A boolean which if set to True will not calculate minimum/ maximum values. 
-        file_path:      The path where the vernier outputs are located.
-        mpiranks:       The number of mpi ranks (equivalent to the number of files) to iterate through.
-        input_name:     The name of the vernier output files without the rank.
         full_info_bool: A boolean which if set to True will give merge all vernier recordings for final output.
 
     Returns:
@@ -185,6 +182,60 @@ def merge_and_analyse(file_path: Path,
         output_df["Calls"] = max_df["Calls"]
     return output_df
 
+def single_merge(file_path: Path,
+                 input_name: str,
+                 max_only_bool: bool,
+                 full_info_bool: bool,
+            ) -> pd.DataFrame:
+    """ Reads in the collated file and merges data
+
+        REPLACE THIS REPLACE THIS REPLACE THIS
+    Iterates the 'rank' variable, opening all of the vernier outputs using the 'read_and_pre_process'
+    function. It will copy the first output file to the prev_df dataframe, then add all the other files
+    before averaging them.
+        REPLACE THIS REPLACE THIS REPLACE THIS
+
+    Args:
+        file_path:      The path where the vernier output is located.
+        input_name:     The name of the collated vernier output file 
+        max_only_bool:  A boolean which if set to True will not calculate minimum/ maximum values. 
+        full_info_bool: A boolean which if set to True will give merge all vernier recordings for final output.
+
+    Returns:
+        The merged dataframe, containing the routine names and the mean 'Self' and 'Total' values across all outputs.
+    """
+    print(f"Path to open: {file_path}")
+
+    """
+    CREATE INITIAL FRAME
+    """
+    file = open(f'{file_path}/{input_name}')
+    content = file.read()
+
+    """
+    LOAD AND MERGE NEXT FRAME
+    """
+
+    """ Averages the summed dataframe """    
+    mean_df = prev_df.drop(columns=["Routine"]) / int(mpiranks)
+    mean_df["Routine"] = prev_df["Routine"]
+
+    """ Adds the min/ max values to the mean dataframe and renames columns """
+
+    if full_info_bool:
+        output_df = mean_df.drop(columns=["Calls"])
+    else:
+        output_df = mean_df.copy()
+    for column in output_df.drop(columns=["Routine"]):
+        if not(max_only_bool):
+            output_df[f"Min_{column}"]  = min_df[column]
+            output_df[f"Mean_{column}"] = mean_df[column]
+        output_df[f"Max_{column}"]  = max_df[column]
+        output_df = output_df.drop(columns=[f"{column}"])  
+    if full_info_bool:
+        output_df["Calls"] = max_df["Calls"]
+    return output_df
+
 def main():
 
     """ Read in command line arguments, assigning them to variables. Determine how many outputs to merge """
@@ -200,6 +251,16 @@ def main():
         print("Processing single file")
         if input_name == "vernier-output-"
             input_name == "vernier-output-collated"
+
+        print("\nReading and Merging...")
+        merged_frame = single_merge(file_path, input_name, max_only_bool, full_info_bool)
+        thread_string = "@0" 
+        merged_frame["Routine"] = merged_frame["Routine"].str.replace(thread_string, '')
+
+        print("\nWriting...")
+        with open(f"{merged_file_name}", 'w') as f:
+                  f.write(merged_frame.to_string(index=False, col_space=10))
+        print(f"Merged outputs written to {merged_file_name}\n")
 
     else:
 
